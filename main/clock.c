@@ -45,13 +45,15 @@ void app_main(void) {
 
   gpio_reset_pin(LED);
   gpio_set_direction(LED, GPIO_MODE_OUTPUT);
-  gpio_set_level(D2, digitON);
-  gpio_set_level(B, segmentON);
-  gpio_set_level(C, segmentON);
-
-  while (1){
+    while (1){
+    gpio_set_level(D1, digitON);
+    gpio_set_level(B, segmentON);
+    gpio_set_level(C, segmentON);
     gpio_set_level(LED, 1);
     vTaskDelay(duration);
+    gpio_set_level(D1, digitOFF);
+    gpio_set_level(B, segmentOFF);
+    gpio_set_level(C, segmentOFF);
     gpio_set_level(LED, 0);
     vTaskDelay(duration);
 
