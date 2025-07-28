@@ -1,2 +1,4 @@
 build/
 howToBuild.txt
+sdkconfig
+sdkconfig.old
