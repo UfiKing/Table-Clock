@@ -4,6 +4,12 @@
 #include "esp_system.h"
 #include "esp_log.h"
 #include "8segDisplayLib.h"
+#include "esp_sntp.h"
+#include "esp_netif"
+#include "esp_event.h"
+#include "esp_wifi.h"
+
+#include "credentials.h"
 
 uint8_t counter = 00;
 uint8_t minutes = 0;
@@ -22,6 +28,29 @@ void singleDigitExample1(uint8_t segments[8], uint32_t delay){
     }
       
   }
+}
+
+
+void initTimeServer() {
+  esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
+  esp_netif_sntp_init(&config);
+}
+
+void getTime() {
+  initTimeServer();
+
+  uint8_t retry = 0;
+
+  while (sntp_get_sync_status() == SNTP_SYNC_STATUS_RESET && retry < 10){
+    ESP_LOGI("time sync", "waiting for the time server to sync");
+    retry++;
+  }
+
+  time_t now = 0;
+  struct tm timeInfo = { 0 };
+  time(&now);
+  localtime_r(&now, &timeinfo);
+
 }
 
 void countingTask(void *pvParameters) {
@@ -62,7 +91,9 @@ void app_main(void){
   gpio_set_level(23, 0);
   gpio_set_level(15, 0);
   gpio_set_level(2, 0);
-  
+ 
+  getTime();
+
   xTaskCreatePinnedToCore(
     countingTask, //function
     "Counter", //name

@@ -1,6 +1,5 @@
 #ifndef _8SEG_DISPLAY_LIB
 #define _8SEG_DISPLAY_LIB
-#include <stdio.h>
 
 void setDelay(uint32_t newDelay);
 
