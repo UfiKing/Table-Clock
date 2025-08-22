@@ -2,10 +2,13 @@
 #include "freertos/task.h"
 #include "driver/gpio.h"
 #include "esp_system.h"
-
+#include "esp_log.h"
 #include "8segDisplayLib.h"
 
-uint32_t counter;
+uint8_t counter = 00;
+uint8_t minutes = 0;
+uint8_t hours = 0;
+
 
 void singleDigitExample1(uint8_t segments[8], uint32_t delay){
   
@@ -24,10 +27,18 @@ void singleDigitExample1(uint8_t segments[8], uint32_t delay){
 void countingTask(void *pvParameters) {
   while(1){
     counter++;
-    if (counter > 9){
+    if (counter > 59){
       counter = 0;
+      minutes++;
+      if (minutes == 60){
+        hours++;
+        minutes = 0;
+        if (hours == 24){
+          hours = 0;
+        }
+      }
     }
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    vTaskDelay(10   / portTICK_PERIOD_MS);
   
   }
 }
@@ -52,7 +63,6 @@ void app_main(void){
   gpio_set_level(15, 0);
   gpio_set_level(2, 0);
   
-
   xTaskCreatePinnedToCore(
     countingTask, //function
     "Counter", //name
@@ -63,11 +73,29 @@ void app_main(void){
     0  //core id
   );
 
-
   while(1){
-    displaySingleNum(segments1, counter);
-    displaySingleNum(segments2, 0b11111111);
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+
+    turnOnDigit(digit1[0]);
+    turnOnDigit(digit2[0]);
+    displaySingleNum(segments1, hours / 10); 
+    displaySingleNum(segments2, minutes / 10);
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+    
+    turnOffDigit(digit1[0]);
+    turnOffDigit(digit2[0]);
+    
+    turnOnDigit(digit1[1]);
+    turnOnDigit(digit2[1]); 
+    
+    displaySingleNum(segments1, hours % 10);
+    displaySingleNum(segments2, minutes % 10);
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+    
+    turnOffDigit(digit1[1]);
+    turnOffDigit(digit2[1]);
+
+
     //displayNums(segments1, digit1, nums1 , 2);
     //displayNums(segments2, digit2, nums2, 2);
   
@@ -79,4 +107,10 @@ void app_main(void){
 
 
   
+
+
+
+
+
+
 

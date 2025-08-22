@@ -143,15 +143,15 @@ void displayNums2(uint8_t segmentPins[8], uint8_t digitPins[2], uint8_t num){
 
 
   for(uint8_t i = 0; i < 8; i++){
-    turnOnDigit(digitPins[0]);
-    displaySingleNum(num / 10 - 10);
-    vTaskDelay(delay / portTICK_PERIOD_MS);
-    turnOffDigit(digitPins[0]);
-    turnOnDigit(digitPins[1]);
-    displaySingleNum(num % 10);
-    vTaskDelay(delay / portTICK_PERIOD_MS);
-    turnOffDigit(digitPins[1]);
 
+    turnOnDigit(digitPins[0]);
+    displaySingleNum(segmentPins, num / 10); 
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+    turnOffDigit(digitPins[0]);
+    turnOnDigit(digitPins[1]); 
+    displaySingleNum(segmentPins, (num % 10));
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+    turnOffDigit(digitPins[1]);
 
 
   }

@@ -2,3 +2,5 @@ build/
 howToBuild.txt
 sdkconfig
 sdkconfig.old
+dependencies.lock
+dependencies.lock.old
