@@ -127,7 +127,7 @@ void turnOffDigit(uint8_t pin){
 
 
 
-void displayNums(uint8_t segmentPins[8], uint8_t digitPins[], uint8_t nums[], uint8_t len){
+void displayNumsAny(uint8_t segmentPins[8], uint8_t digitPins[], uint8_t nums[], uint8_t len){
 
   for(int i = 0; i < len; i++){ 
     turnOnDigit(digitPins[i]);
@@ -139,6 +139,23 @@ void displayNums(uint8_t segmentPins[8], uint8_t digitPins[], uint8_t nums[], ui
 }
 
 
+void displayNums2(uint8_t segmentPins[8], uint8_t digitPins[2], uint8_t num){
+
+
+  for(uint8_t i = 0; i < 8; i++){
+    turnOnDigit(digitPins[0]);
+    displaySingleNum(num / 10 - 10);
+    vTaskDelay(delay / portTICK_PERIOD_MS);
+    turnOffDigit(digitPins[0]);
+    turnOnDigit(digitPins[1]);
+    displaySingleNum(num % 10);
+    vTaskDelay(delay / portTICK_PERIOD_MS);
+    turnOffDigit(digitPins[1]);
+
+
+
+  }
+}
 
 
 
