@@ -5,3 +5,5 @@ sdkconfig.old
 dependencies.lock
 dependencies.lock.old
 components/credentials/
+Kconfig.projbuild
+
