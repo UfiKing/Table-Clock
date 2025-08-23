@@ -10,46 +10,21 @@
 #include "nvs_flash.h"
 #include <string.h>
 
+#include <stdbool.h>
+
+#include "esp_sntp.h"
+#include "esp_netif.h"
+#include "esp_netif_sntp.h"
+
 #include "lwip/err.h"
 #include "lwip/sys.h"
 
-#define EXAMPLE_ESP_WIFI_SSID CONFIG_ESP_WIFI_SSID
-#define EXAMPLE_ESP_WIFI_PASS CONFIG_ESP_WIFI_PASSWORD
-#define EXAMPLE_ESP_MAXIMUM_RETRY CONFIG_ESP_MAXIMUM_RETRY
+#include "credentials.h"
 
-#if CONFIG_ESP_WPA3_SAE_PWE_HUNT_AND_PECK
-#define ESP_WIFI_SAE_MODE WPA3_SAE_PWE_HUNT_AND_PECK
-#define EXAMPLE_H2E_IDENTIFIER ""
-#elif CONFIG_ESP_WPA3_SAE_PWE_HASH_TO_ELEMENT
-#define ESP_WIFI_SAE_MODE WPA3_SAE_PWE_HASH_TO_ELEMENT
-#define EXAMPLE_H2E_IDENTIFIER CONFIG_ESP_WIFI_PW_ID
-#elif CONFIG_ESP_WPA3_SAE_PWE_BOTH
-#define ESP_WIFI_SAE_MODE WPA3_SAE_PWE_BOTH
-#define EXAMPLE_H2E_IDENTIFIER CONFIG_ESP_WIFI_PW_ID
-#endif
-#if CONFIG_ESP_WIFI_AUTH_OPEN
-#define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_OPEN
-#elif CONFIG_ESP_WIFI_AUTH_WEP
-#define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_WEP
-#elif CONFIG_ESP_WIFI_AUTH_WPA_PSK
-#define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_WPA_PSK
-#elif CONFIG_ESP_WIFI_AUTH_WPA2_PSK
-#define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_WPA2_PSK
-#elif CONFIG_ESP_WIFI_AUTH_WPA_WPA2_PSK
 #define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_WPA_WPA2_PSK
-#elif CONFIG_ESP_WIFI_AUTH_WPA3_PSK
-#define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_WPA3_PSK
-#elif CONFIG_ESP_WIFI_AUTH_WPA2_WPA3_PSK
-#define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_WPA2_WPA3_PSK
-#elif CONFIG_ESP_WIFI_AUTH_WAPI_PSK
-#define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_WAPI_PSK
-#endif
+#define ESP_WIFI_SAE_MODE WPA3_SAE_PWE_BOTH
+#define EXAMPLE_H2E_IDENTIFIER ""
 
-//#include "credentials.h"
-
-uint8_t counter = 00;
-uint8_t minutes = 0;
-uint8_t hours = 0;
 
 
 void singleDigitExample1(uint8_t segments[8], uint32_t delay){
@@ -169,9 +144,18 @@ void wifi_init_sta(void)
     }
 }
 
+uint8_t counter = 0;
+int minutes = 0;
+int hours = 0;
+bool x = true;
+
+
 void countingTask(void *pvParameters) {
   while(1){
-    counter++;
+    x = !x;
+    if(x == true){
+      counter++;
+    }
     if (counter > 59){
       counter = 0;
       minutes++;
@@ -183,9 +167,35 @@ void countingTask(void *pvParameters) {
         }
       }
     }
-    vTaskDelay(10   / portTICK_PERIOD_MS);
+    vTaskDelay(500  / portTICK_PERIOD_MS);
   
   }
+}
+
+
+
+void initSNTP(){
+  esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
+  
+  esp_netif_sntp_init(&config);
+
+}
+
+void getTime(){
+  initSNTP();
+
+  int retry = 0;
+
+  while (sntp_get_sync_status() == SNTP_SYNC_STATUS_RESET && retry < 10){
+    ESP_LOGI("cajt", "cakam da se povezem ... (%d/10)", retry);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+  }
+
+  time_t now = 0;
+  struct tm timeinfo = {0};
+  time(&now);
+  localtime_r(&now, &timeinfo);
+  ESP_LOGI("cajt", "current time = %s", asctime(&timeinfo));
 }
 
 
@@ -208,7 +218,32 @@ void app_main(void){
   gpio_set_level(15, 0);
   gpio_set_level(2, 0);
   
+  esp_err_t ret = nvs_flash_init();
+  if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND){
+    ESP_ERROR_CHECK(nvs_flash_erase());
+    ret = nvs_flash_init();
+  }
+  ESP_ERROR_CHECK(ret);
+
+  if (CONFIG_LOG_MAXIMUM_LEVEL > CONFIG_LOG_DEFAULT_LEVEL) {
+    esp_log_level_set("wifi", CONFIG_LOG_MAXIMUM_LEVEL);
+
+  }
+  wifi_init_sta();
+
+  setenv("TZ", "CET-1CEST,M3.5.0/2,M10.5.0/3", 1);
+  tzset();
+
+  getTime();
   
+  time_t now;
+  struct tm timeinfo;
+  time(&now);
+  localtime_r(&now, &timeinfo);
+
+  minutes = timeinfo.tm_min;
+  hours = timeinfo.tm_hour;
+  counter = timeinfo.tm_sec;
 
   xTaskCreatePinnedToCore(
     countingTask, //function
@@ -228,7 +263,7 @@ void app_main(void){
     displaySingleNum(segments1, hours / 10); 
     displaySingleNum(segments2, minutes / 10);
     vTaskDelay(10 / portTICK_PERIOD_MS);
-    
+        
     turnOffDigit(digit1[0]);
     turnOffDigit(digit2[0]);
     
@@ -237,6 +272,11 @@ void app_main(void){
     
     displaySingleNum(segments1, hours % 10);
     displaySingleNum(segments2, minutes % 10);
+    
+    if(x == true){
+      gpio_set_level(3, 1);
+    }
+
     vTaskDelay(10 / portTICK_PERIOD_MS);
     
     turnOffDigit(digit1[1]);
